@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Assistant</title>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#171b2e; --panel2:#1e2340; --line:#2a3054;
+    --text:#e8eaf6; --muted:#9aa3c7;
+    --user:linear-gradient(135deg,#6c7bff,#8b5cf6); --ai:#222848;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
+       height:100vh;display:flex;justify-content:center}
+  .app{width:min(880px,100%);height:100vh;display:flex;flex-direction:column;
+       background:var(--panel);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  header{display:flex;align-items:center;gap:12px;padding:14px 18px;
+         border-bottom:1px solid var(--line);background:var(--panel2)}
+  .avatar{width:40px;height:40px;border-radius:12px;background:var(--user);
+          display:flex;align-items:center;justify-content:center;font-size:20px}
+  .title{font-weight:700;font-size:16px}
+  .subtitle{font-size:12px;color:var(--muted)}
+  .spacer{flex:1}
+  #identityChip{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+                color:var(--muted);background:var(--panel);max-width:240px;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #identityChip.known{color:#a5f3fc;border-color:#155e75;background:#083344}
+  #newChatBtn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);
+              background:var(--panel);color:var(--text);cursor:pointer;font-size:13px}
+  #newChatBtn:hover{border-color:#6c7bff}
+  #chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;gap:10px;max-width:85%}
+  .row.user{align-self:flex-end;flex-direction:row-reverse}
+  .bubble{padding:12px 16px;border-radius:16px;line-height:1.55;font-size:14.5px;
+          white-space:pre-wrap;word-wrap:break-word}
+  .row.ai .bubble{background:var(--ai);border:1px solid var(--line);border-top-left-radius:4px}
+  .row.user .bubble{background:var(--user);color:#fff;border-top-right-radius:4px}
+  .mini{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;
+        align-items:center;justify-content:center;font-size:15px;margin-top:2px}
+  .row.ai .mini{background:var(--panel2);border:1px solid var(--line)}
+  .banner{align-self:center;text-align:center;font-size:13px;color:var(--muted);
+          background:var(--panel2);border:1px solid var(--line);padding:10px 18px;
+          border-radius:12px;max-width:90%;line-height:1.6}
+  .banner b{color:#a5f3fc}
+  .divider{align-self:center;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .typing{display:inline-flex;gap:4px;padding:4px 0}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.25;transform:scale(.9)}40%{opacity:1;transform:scale(1)}}
+  footer{padding:14px 18px;border-top:1px solid var(--line);background:var(--panel2)}
+  .inputbar{display:flex;gap:10px}
+  input{flex:1;padding:13px 16px;border-radius:12px;border:1px solid var(--line);
+        background:var(--panel);color:var(--text);font-size:14.5px;outline:none}
+  input:focus{border-color:#6c7bff}
+  button.send{padding:0 20px;border-radius:12px;border:none;background:var(--user);
+              color:#fff;font-size:16px;cursor:pointer}
+  button.send:disabled{opacity:.5;cursor:not-allowed}
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;text-align:center}
+
+  /* ---- welcome form overlay ---- */
+  #welcome{position:fixed;inset:0;background:rgba(8,10,20,.72);backdrop-filter:blur(6px);
+           display:flex;align-items:center;justify-content:center;z-index:10}
+  .card{width:min(400px,92vw);max-height:92vh;overflow-y:auto;background:var(--panel2);
+        border:1px solid var(--line);border-radius:18px;padding:28px;text-align:center;
+        box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .card .logo{width:64px;height:64px;margin:0 auto;border-radius:18px;background:var(--user);
+              display:flex;align-items:center;justify-content:center;font-size:32px}
+  .card h1{font-size:20px;margin:14px 0 6px}
+  .card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+  .card label{display:block;text-align:left;font-size:11px;color:var(--muted);
+              margin:8px 0 4px;letter-spacing:.5px;text-transform:uppercase}
+  .card input{width:100%;text-align:left}
+  #startBtn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--user);
+            color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:16px}
+  #startBtn:disabled{opacity:.6;cursor:wait}
+  #guestBtn{display:inline-block;margin-top:14px;font-size:12.5px;color:var(--muted);
+            cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
+  #guestBtn:hover{color:var(--text)}
+  .card .badge{display:inline-block;font-size:11px;color:#a5f3fc;background:#083344;
+               border:1px solid #155e75;padding:4px 10px;border-radius:999px;margin-bottom:8px}
+  @media(max-width:560px){ #identityChip{display:none} .row{max-width:95%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="avatar">AI</div>
+    <div><div class="title">Portfolio Assistant</div>
+         <div class="subtitle">Experience · Skills · Projects</div></div>
+    <div class="spacer"></div>
+    <div id="identityChip">Loading...</div>
+    <button id="newChatBtn">+ New chat</button>
+  </header>
+  <div id="chat"></div>
+  <footer>
+    <div class="inputbar">
+      <input id="input" type="text" placeholder="Type your message..." autocomplete="off">
+      <button class="send" id="sendBtn">Send</button>
+    </div>
+    <div class="hint">RAG-powered assistant with long-term memory</div>
+  </footer>
+</div>
+
+<div id="welcome">
+  <div class="card">
+    <div class="logo">AI</div>
+    <h1 id="wTitle">Welcome!</h1>
+    <p id="wDesc">Introduce yourself so I can recognize you and load our previous
+       conversations next time. All fields are optional - you can also chat as a guest.</p>
+    <label for="wName">Name</label>
+    <input id="wName" placeholder="e.g. Sara Khan" autocomplete="name">
+    <label for="wEmail">Email</label>
+    <input id="wEmail" type="email" placeholder="e.g. sara@example.com" autocomplete="email">
+    <label for="wPhone">Phone</label>
+    <input id="wPhone" type="tel" placeholder="e.g. +92 300 1234567" autocomplete="tel">
+    <button id="startBtn">Start chatting</button>
+    <button id="guestBtn">Skip - continue as guest</button>
+  </div>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("sendBtn");
+const newChatBtn = document.getElementById("newChatBtn");
+const chip = document.getElementById("identityChip");
+const welcome = document.getElementById("welcome");
+const wName = document.getElementById("wName");
+const wEmail = document.getElementById("wEmail");
+const wPhone = document.getElementById("wPhone");
+const startBtn = document.getElementById("startBtn");
+const guestBtn = document.getElementById("guestBtn");
+const wTitle = document.getElementById("wTitle");
+const wDesc = document.getElementById("wDesc");
+
+let sessionId = null;
+let busy = false;
+
+const esc = s => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+const scroll = () => { chat.scrollTop = chat.scrollHeight; };
+
+function setIdentity(label, known){
+  if (label){ chip.textContent = "Signed in: " + label; chip.classList.add("known"); }
+  else { chip.textContent = "Guest"; chip.classList.remove("known"); }
+}
+function addBanner(html){
+  const b = document.createElement("div");
+  b.className = "banner"; b.innerHTML = html;
+  chat.appendChild(b); scroll();
+}
+function addBubble(role, text){
+  const row = document.createElement("div");
+  row.className = "row " + role;
+  const mini = document.createElement("div");
+  mini.className = "mini"; mini.textContent = role === "user" ? "You" : "AI";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  const span = document.createElement("span");
+  span.textContent = text;
+  bubble.appendChild(span);
+  row.appendChild(mini); row.appendChild(bubble);
+  chat.appendChild(row); scroll();
+  return span;
+}
+function showTyping(span){
+  span.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+}
+
+/* render the user's past chats, grouped per conversation */
+function renderTurns(turns){
+  let last = null;
+  turns.forEach(t => {
+    if (t.session_id !== last){
+      const d = document.createElement("div");
+      d.className = "divider";
+      d.textContent = t.session_id === sessionId ? "- this conversation -" : "- previous conversation -";
+      chat.appendChild(d);
+      last = t.session_id;
+    }
+    addBubble("user", t.user_query);
+    addBubble("ai", t.assistant_response);
+  });
+  if (turns.length) scroll();
+}
+
+async function loadHistory(){
+  try {
+    const res = await fetch(`/history/${sessionId}?limit=30`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.turns || !data.turns.length) return false;
+    const div = document.createElement("div");
+    div.className = "divider"; div.textContent = "- earlier in this conversation -";
+    chat.appendChild(div);
+    data.turns.forEach(t => { addBubble("user", t.user_query); addBubble("ai", t.assistant_response); });
+    scroll();
+    return true;
+  } catch(e){ return false; }
+}
+
+async function refreshIdentity(){
+  try {
+    const res = await fetch(`/contact/${sessionId}`);
+    if (!res.ok) return;
+    const c = await res.json();
+    if (c.email){ localStorage.setItem("pf_email", c.email); }
+    if (c.name){ localStorage.setItem("pf_name", c.name); }
+    if (c.email || c.name) setIdentity(c.name || c.email, true);
+  } catch(e){}
+}
+
+/* ---------- welcome form ---------- */
+function showWelcome(){
+  const savedName = localStorage.getItem("pf_name") || "";
+  const savedEmail = localStorage.getItem("pf_email") || "";
+  const savedPhone = localStorage.getItem("pf_phone") || "";
+  wName.value = savedName; wEmail.value = savedEmail; wPhone.value = savedPhone;
+  if (savedEmail || savedName){
+    wTitle.textContent = "Welcome back!";
+    wDesc.textContent = "We found your saved details - press continue to load your previous conversations, or update them below.";
+    startBtn.textContent = "Continue as " + (savedName || savedEmail);
+  } else {
+    wTitle.textContent = "Welcome!";
+    startBtn.textContent = "Start chatting";
+  }
+  welcome.style.display = "flex";
+}
+function hideWelcome(){ welcome.style.display = "none"; }
+
+async function begin(){
+  if (busy) return;
+  busy = true; startBtn.disabled = true;
+  const name = wName.value.trim() || null;
+  const email = wEmail.value.trim() || null;
+  const phone = wPhone.value.trim() || null;
+  try {
+    const res = await fetch("/session/start", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        session_id: localStorage.getItem("pf_session_id"),
+        name: name, email: email, phone: phone
+      })
+    });
+    const data = await res.json();
+    sessionId = data.session_id;
+    localStorage.setItem("pf_session_id", sessionId);
+    if (data.name) localStorage.setItem("pf_name", data.name);
+    if (data.email) localStorage.setItem("pf_email", data.email);
+    if (phone) localStorage.setItem("pf_phone", phone);
+
+    setIdentity(data.name || data.email, !!(data.name || data.email));
+    hideWelcome();
+
+    const turns = data.past_turns || [];
+    if (turns.length){
+      addBanner(`Welcome back, <b>${esc(data.name || data.email)}</b> - I have loaded our previous conversations below.`);
+      renderTurns(turns);
+    } else if (data.name || data.email){
+      addBanner(`Nice to meet you, <b>${esc(data.name || data.email)}</b>! Ask me anything about my experience, skills and projects.`);
+    } else {
+      const has = await loadHistory();
+      if (!has){
+        addBanner(`Hi! I am the portfolio assistant - ask me anything about my experience, skills and projects.<br>
+          <span style="font-size:12px">Tip: share your name, email and phone anytime and I will remember you in future conversations.</span>`);
+      }
+    }
+  } catch(e){
+    addBanner("Could not reach the server - please refresh the page.");
+  }
+  busy = false; startBtn.disabled = false; input.focus();
+}
+
+/* ---------- chat ---------- */
+async function send(){
+  const text = input.value.trim();
+  if (!text || busy || !sessionId) return;
+  busy = true; sendBtn.disabled = true;
+  addBubble("user", text);
+  input.value = "";
+  const span = addBubble("ai", "");
+  showTyping(span);
+  try {
+    const res = await fetch("/chat/stream", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({session_id: sessionId, message: text})
+    });
+    if (!res.ok || !res.body) throw new Error("Server error " + res.status);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let started = false, full = "";
+    while (true){
+      const {done, value} = await reader.read();
+      if (done) break;
+      if (!started){ started = true; span.textContent = ""; }
+      full += decoder.decode(value, {stream:true});
+      span.textContent = full;
+      scroll();
+    }
+    if (!started) span.textContent = "(empty response)";
+  } catch(e){
+    span.textContent = "Connection problem - please try again.";
+  }
+  busy = false; sendBtn.disabled = false; input.focus();
+  refreshIdentity();
+}
+
+startBtn.onclick = begin;
+guestBtn.onclick = begin;                 // empty fields = guest (server handles it)
+[wName, wEmail, wPhone].forEach(el =>
+  el.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); begin(); } }));
+
+newChatBtn.onclick = () => {
+  if (busy) return;
+  if (!confirm("Start a new conversation?\n\nIf you have shared your email, I will still remember you.")) return;
+  localStorage.removeItem("pf_session_id");
+  chat.innerHTML = "";
+  showWelcome();                           // form first again
+};
+
+sendBtn.onclick = send;
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+});
+
+showWelcome();
+</script>
+</body>
+</html>
